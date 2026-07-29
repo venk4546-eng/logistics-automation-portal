@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistics & Operations Automation Portal</title>
+    <!-- Google Fonts & FontAwesome Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --primary: #2563eb;
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.02);
+            --shadow-md: 0 10px 25px -3px rgba(15, 23, 42, 0.08);
+            --shadow-hover: 0 20px 30px -10px rgba(15, 23, 42, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        /* Top Header Area */
+        .portal-header {
+            text-align: center;
+            max-width: 800px;
+            margin-bottom: 45px;
+        }
+
+        .portal-header .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            border: 1px solid #bfdbfe;
+        }
+
+        .portal-header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1e293b;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+
+        .portal-header p {
+            color: var(--text-muted);
+            font-size: 15px;
+        }
+
+        /* Cards Grid Layout */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 24px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        /* Card Component */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 28px 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: var(--accent-color, var(--primary));
+        }
+
+        .card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-hover);
+            border-color: transparent;
+        }
+
+        /* Card Content */
+        .card-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            background: var(--icon-bg, #eff6ff);
+            color: var(--accent-color, var(--primary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-bottom: 20px;
+        }
+
+        .card-body h2 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .card-body p {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 24px;
+            min-height: 42px;
+        }
+
+        /* Action Button */
+        .card-action a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px 18px;
+            background: var(--accent-color, var(--primary));
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .card-action a:hover {
+            filter: brightness(0.9);
+            gap: 12px;
+        }
+
+        /* Specific Accent Colors for Modules */
+        .card-beat { --accent-color: #2563eb; --icon-bg: #eff6ff; }
+        .card-summary { --accent-color: #0d9488; --icon-bg: #ccfbf1; }
+        .card-la { --accent-color: #ea580c; --icon-bg: #ffedd5; }
+        .card-first { --accent-color: #0284c7; --icon-bg: #e0f2fe; }
+        .card-barcode { --accent-color: #4f46e5; --icon-bg: #e0e7ff; }
+        .card-merge { --accent-color: #d97706; --icon-bg: #fef3c7; }
+        .card-data { --accent-color: #9333ea; --icon-bg: #f3e8ff; }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            body { padding: 20px 12px; }
+            .portal-header h1 { font-size: 24px; }
+            .grid-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Section -->
+    <header class="portal-header">
+        <div class="brand-badge">
+            <i class="fa-solid fa-truck-fast"></i> Metropolis Logistics Intelligence
+        </div>
+        <h1>Operations Automation Suite</h1>
+        <p>Centralized platform for Beat Performance, TAT Tracking, Barcode Audits & Data Analytics</p>
+    </header>
+
+    <!-- Modules Grid Section -->
+    <main class="grid-container">
+
+        <!-- 1. Beat Performance -->
+        <div class="card card-beat">
+            <div>
+                <div class="card-icon">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <div class="card-body">
+                    <h2>Beat Performance</h2>
+                    <p>Process FTD/MTD Master dumps for Visit Compliance & TAT metrics.</p>
+                </div>
+            </div>
+            <div class="card-action">
+                <a href="/beat-performance">Open Portal <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+        </div>
+
+        <!-- 2. Beat Summary & Compare -->
+        <div class="card card-summary">
+            <div>
+                <div class="card-icon">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </div>
+                <div class="card-body">
+                    <h2>Beat Summary & Compare</h2>
+                    <p>Interactive City/Hub Dropdowns, Date Filters & City Comparisons.</p>
+                </div>
+            </div>
+            <div class="card-action">
+                <a href="/beat-summary">Open Summary <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+        </div>
+
+        <!-- 3. LA Visit Status -->
+        <div class="card card-la">
+            <div>
+                <div class="card-icon">
+                    <i class="fa-solid fa-user-clock"></i>
+                </div>
+                <div class="card-body">
+                    <h2>LA Visit Status</h2>
+                    <p>Slot-wise Diff & Status (On time, Early, Delay) with auto mild colors.</p>
+                </div>
+            </div>
+            <div class="card-action">
+                <a href="/la-visit-status">Open Portal <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+        </div>
+
+        <!-- 4. First Visit Status -->
+        <div class="card card-first">
+            <div>
+                <div class="card-icon">
+                    <i class="fa-solid fa-route"></i>
+                </div>
+                <div class="card-body">
+                    <h2>First Visit Status</h2>
+                    <p>Track LA first visits, delays, and generate color-coded status dumps.</p>
+                </div>
+            </div>
+            <div class="card-action">
+                <a href="/first-visit">Open Portal <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+        </div>
+
+        <!-- 5. Barcode Pending -->
+        <div class="card card-barcode">
+            <div>
+                <div class="card-icon">
+                    <i class="fa-solid fa-barcode"></i>
+                </div>
+                <div class="card-body">
+                    <h2>Barcode Pending</h2>
+                    <p>Compare Barcode ranges against Excel dumps and generate PDF reports.</p>
+                </div>
+            </div>
+            <div class="card-action">
+                <a href="/barcode-pending">Open Portal <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+        </div>
+
+        <!-- 6. 3 in 1 Merge -->
+        <div class="card card-merge">
+            <div>
+                <div class="card-icon">
+                    <i class="fa-solid fa-object-group"></i>
+                </div>
+                <div class="card-body">
+                    <h2>3 in 1 Merge</h2>
+                    <p>Merge 3 raw reports, filter target cities, and auto-assign States.</p>
+                </div>
+            </div>
+            <div class="card-action">
+                <a href="/three-in-one">Open Portal <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+        </div>
+
+        <!-- 7. Data Capture -->
+        <div class="card card-data">
+            <div>
+                <div class="card-icon">
+                    <i class="fa-solid fa-database"></i>
+                </div>
+                <div class="card-body">
+                    <h2>Data Capture</h2>
+                    <p>Calculate TAT (<30 / >30mins) & VLOOKUP Micromarket from Cluster Master.</p>
+                </div>
+            </div>
+            <div class="card-action">
+                <a href="/data-capture">Open Portal <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+        </div>
+
+    </main>
+
+</body>
+</html>

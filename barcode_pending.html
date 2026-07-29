@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Barcode Pending Module</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; background-color: #f4f6f9; }
+        .container { background: white; padding: 25px; border-radius: 8px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); max-width: 900px; margin: auto; }
+        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .btn-home { background-color: #6c757d; color: white; text-decoration: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; font-size: 14px; }
+        h2 { color: #1e3d59; margin: 0; }
+        .form-row { display: flex; gap: 15px; margin-bottom: 20px; }
+        .form-group { flex: 1; }
+        label { font-weight: bold; display: block; margin-bottom: 8px; color: #333; }
+        input[type="text"], input[type="file"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background-color: #1e3d59; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; }
+        button:hover { background-color: #17b978; }
+        .btn-download { background-color: #e74c3c; text-decoration: none; color: white; padding: 12px 20px; display: inline-block; border-radius: 4px; margin-bottom: 15px; font-weight: bold; }
+        .btn-download:hover { background-color: #c0392b; }
+        .grid-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; background: #f9f9f9; padding: 15px; border: 1px solid #ddd; }
+        .grid-item { background: white; padding: 8px; border: 1px solid #ccc; text-align: center; font-weight: bold; font-size: 13px; color: #d9534f; }
+        hr { border: 0; height: 1px; background: #ccc; margin: 30px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-bar">
+        <h2>🏷️ Barcode Pending Checker</h2>
+        <a href="/" class="btn-home">🏠 Back to Home</a>
+    </div>
+    
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Start Barcode:</label>
+                <input type="text" name="start_bc" placeholder="e.g. 1001" required>
+            </div>
+            <div class="form-group">
+                <label>End Barcode:</label>
+                <input type="text" name="end_bc" placeholder="e.g. 1050" required>
+            </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 20px;">
+            <label>Upload Excel File (.xlsx):</label>
+            <input type="file" name="master_file" accept=".xlsx" required>
+        </div>
+        <button type="submit">🔍 Compare & Generate PDF Report</button>
+    </form>
+
+    {% if show_result %}
+    <hr>
+    <h3> Missing Barcodes Summary</h3>
+    <p>Range: <b>{{ start_bc }}</b> to <b>{{ end_bc }}</b> | Total Pending: <b>{{ total_missing }}</b></p>
+    
+    <a href="/download/barcode_pdf" class="btn-download">📄 Download Missing Barcodes PDF</a>
+    
+    <div class="grid-container">
+        {% for bc in missing_barcodes %}
+        <div class="grid-item">{{ bc }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+</body>
+</html>
