@@ -1,0 +1,7 @@
+Flask==3.0.0
+pandas==2.1.4
+openpyxl==3.1.2
+numpy==1.26.2
+reportlab==4.0.8
+calamine==0.1.7
+gunicorn==21.2.0
