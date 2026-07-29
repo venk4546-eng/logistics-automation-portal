@@ -3,5 +3,4 @@ pandas
 openpyxl
 numpy
 reportlab
-calamine
 gunicorn
