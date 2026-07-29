@@ -123,7 +123,7 @@ def parse_html_exact_strings(file_path):
             pass
     return None
 
-def read_any_excel_file(file_path):
+def read_any_excel_file(file_path, sheet_name=0):
     df_html = parse_html_exact_strings(file_path)
     if df_html is not None and not df_html.empty:
         return df_html
@@ -137,14 +137,14 @@ def read_any_excel_file(file_path):
             except Exception:
                 pass
 
-    for engine_name in ['xlrd', 'openpyxl', 'calamine', 'pyxlsb']:
+    for engine_name in ['openpyxl', 'xlrd', 'pyxlsb']:
         try:
-            return pd.read_excel(file_path, engine=engine_name)
+            return pd.read_excel(file_path, sheet_name=sheet_name, engine=engine_name)
         except Exception:
             pass
 
     try:
-        return pd.read_excel(file_path)
+        return pd.read_excel(file_path, sheet_name=sheet_name)
     except Exception:
         pass
 
@@ -500,13 +500,13 @@ def write_not_dropped_sheet(writer, df3):
 
 def process_beat_performance(master_excel_path, ftd_date_raw, mtd_date_raw):
     try:
-        df1 = pd.read_excel(master_excel_path, sheet_name='BV', engine='calamine')
-        df2 = pd.read_excel(master_excel_path, sheet_name='EV', engine='calamine')
-        df3 = pd.read_excel(master_excel_path, sheet_name='TAT', engine='calamine')
+        df1 = read_any_excel_file(master_excel_path, sheet_name='BV')
+        df2 = read_any_excel_file(master_excel_path, sheet_name='EV')
+        df3 = read_any_excel_file(master_excel_path, sheet_name='TAT')
     except Exception:
-        df1 = pd.read_excel(master_excel_path, sheet_name='BV')
-        df2 = pd.read_excel(master_excel_path, sheet_name='EV')
-        df3 = pd.read_excel(master_excel_path, sheet_name='TAT')
+        df1 = read_any_excel_file(master_excel_path, sheet_name=0)
+        df2 = pd.DataFrame()
+        df3 = pd.DataFrame()
 
     df1.columns = df1.columns.astype(str).str.strip()
     df1 = normalize_bv_columns(df1)
@@ -516,31 +516,33 @@ def process_beat_performance(master_excel_path, ftd_date_raw, mtd_date_raw):
     df1['DT_PARSED'] = pd.to_datetime(df1[date_col_f1], errors='coerce', dayfirst=True)
     df1['State'] = df1['State'].astype(str).str.strip().str.title() if 'State' in df1.columns else ''
 
-    df2.columns = df2.columns.astype(str).str.strip()
-    c2 = find_city_col(df2)
-    if c2: df2['City'] = df2[c2].astype(str).str.strip().str.title()
-    date_col_f2 = [c for c in df2.columns if 'DATE' in c.upper() or 'TIME' in c.upper()][0]
-    df2['DT_PARSED'] = pd.to_datetime(df2[date_col_f2], errors='coerce', dayfirst=True)
-    df2['State'] = df2['State'].astype(str).str.strip().str.title() if 'State' in df2.columns else ''
-    df2['RANGE_CLEAN'] = df2['RANGE'].astype(str).str.lower().str.strip() if 'RANGE' in df2.columns else ''
-    df2['is_within_30m'] = df2['RANGE_CLEAN'].apply(lambda x: 1 if 'within' in x and '30' in x else 0)
-    df2['total_count'] = df2['RANGE_CLEAN'].apply(lambda x: 1 if 'within' in x or 'beyond' in x else 0)
+    if not df2.empty:
+        df2.columns = df2.columns.astype(str).str.strip()
+        c2 = find_city_col(df2)
+        if c2: df2['City'] = df2[c2].astype(str).str.strip().str.title()
+        date_col_f2 = [c for c in df2.columns if 'DATE' in c.upper() or 'TIME' in c.upper()][0]
+        df2['DT_PARSED'] = pd.to_datetime(df2[date_col_f2], errors='coerce', dayfirst=True)
+        df2['State'] = df2['State'].astype(str).str.strip().str.title() if 'State' in df2.columns else ''
+        df2['RANGE_CLEAN'] = df2['RANGE'].astype(str).str.lower().str.strip() if 'RANGE' in df2.columns else ''
+        df2['is_within_30m'] = df2['RANGE_CLEAN'].apply(lambda x: 1 if 'within' in x and '30' in x else 0)
+        df2['total_count'] = df2['RANGE_CLEAN'].apply(lambda x: 1 if 'within' in x or 'beyond' in x else 0)
 
-    df3.columns = df3.columns.astype(str).str.strip()
-    c3 = find_city_col(df3)
-    if c3: df3['City'] = df3[c3].astype(str).str.strip().str.title()
-    h_col3 = [c for c in df3.columns if 'hub' in c.lower()]
-    if h_col3: df3['Hub'] = df3[h_col3[0]].astype(str).str.strip().str.upper()
+    if not df3.empty:
+        df3.columns = df3.columns.astype(str).str.strip()
+        c3 = find_city_col(df3)
+        if c3: df3['City'] = df3[c3].astype(str).str.strip().str.title()
+        h_col3 = [c for c in df3.columns if 'hub' in c.lower()]
+        if h_col3: df3['Hub'] = df3[h_col3[0]].astype(str).str.strip().str.upper()
 
-    date_col_f3 = [c for c in df3.columns if 'DATE' in c.upper() or 'PICKUP' in c.upper() or 'TIME' in c.upper()][0]
-    df3['DT_PARSED'] = pd.to_datetime(df3[date_col_f3], errors='coerce', dayfirst=True)
-    df3['State'] = df3['State'].astype(str).str.strip().str.title() if 'State' in df3.columns else ''
-    tat_cols = [col for col in df3.columns if 'TAT Tim' in col or 'TAT Timing' in col]
-    df3['TAT_Minutes'] = df3[tat_cols[0]].apply(time_to_minutes) if tat_cols else 0
-    df3['Radius_Clean'] = df3['Radius'].astype(str).str.lower().str.strip() if 'Radius' in df3.columns else 'overall'
+        date_col_f3 = [c for c in df3.columns if 'DATE' in c.upper() or 'PICKUP' in c.upper() or 'TIME' in c.upper()][0]
+        df3['DT_PARSED'] = pd.to_datetime(df3[date_col_f3], errors='coerce', dayfirst=True)
+        df3['State'] = df3['State'].astype(str).str.strip().str.title() if 'State' in df3.columns else ''
+        tat_cols = [col for col in df3.columns if 'TAT Tim' in col or 'TAT Timing' in col]
+        df3['TAT_Minutes'] = df3[tat_cols[0]].apply(time_to_minutes) if tat_cols else 0
+        df3['Radius_Clean'] = df3['Radius'].astype(str).str.lower().str.strip() if 'Radius' in df3.columns else 'overall'
 
     max_data_date = df1['DT_PARSED'].max()
-    if pd.isna(max_data_date): max_data_date = df2['DT_PARSED'].max()
+    if pd.isna(max_data_date) and not df2.empty: max_data_date = df2['DT_PARSED'].max()
 
     dt_ftd = pd.to_datetime(ftd_date_raw, errors='coerce', dayfirst=True) if ftd_date_raw else max_data_date
     if pd.isna(dt_ftd): dt_ftd = max_data_date
@@ -550,10 +552,12 @@ def process_beat_performance(master_excel_path, ftd_date_raw, mtd_date_raw):
 
     df1_ftd = df1[df1['DT_PARSED'].dt.date == dt_ftd.date()].copy()
     df1_mtd = df1[(df1['DT_PARSED'].dt.date >= mtd_start.date()) & (df1['DT_PARSED'].dt.date <= dt_mtd.date())].copy()
-    df2_ftd = df2[df2['DT_PARSED'].dt.date == dt_ftd.date()].copy()
-    df2_mtd = df2[(df2['DT_PARSED'].dt.date >= mtd_start.date()) & (df2['DT_PARSED'].dt.date <= dt_mtd.date())].copy()
-    df3_ftd = df3[df3['DT_PARSED'].dt.date == dt_ftd.date()].copy()
-    df3_mtd = df3[(df3['DT_PARSED'].dt.date >= mtd_start.date()) & (df3['DT_PARSED'].dt.date <= dt_mtd.date())].copy()
+    
+    df2_ftd = df2[df2['DT_PARSED'].dt.date == dt_ftd.date()].copy() if not df2.empty else pd.DataFrame()
+    df2_mtd = df2[(df2['DT_PARSED'].dt.date >= mtd_start.date()) & (df2['DT_PARSED'].dt.date <= dt_mtd.date())].copy() if not df2.empty else pd.DataFrame()
+    
+    df3_ftd = df3[df3['DT_PARSED'].dt.date == dt_ftd.date()].copy() if not df3.empty else pd.DataFrame()
+    df3_mtd = df3[(df3['DT_PARSED'].dt.date >= mtd_start.date()) & (df3['DT_PARSED'].dt.date <= dt_mtd.date())].copy() if not df3.empty else pd.DataFrame()
 
     group_cols = ['State', 'City']
     ftd_overall = calculate_sheet_metrics(df1_ftd, df2_ftd, df3_ftd, group_cols, prefix="FTD ")
@@ -583,7 +587,6 @@ def apply_excel_formatting(file_path):
     wb = load_workbook(file_path)
     ws = wb.active
     
-    # Soft Pastel Mild Colors
     delay_fill = PatternFill(start_color="F8D7DA", end_color="F8D7DA", fill_type="solid")  # Mild Red
     ontime_fill = PatternFill(start_color="D4EDDA", end_color="D4EDDA", fill_type="solid") # Mild Green
     yet_fill = PatternFill(start_color="FFF3CD", end_color="FFF3CD", fill_type="solid")    # Mild Yellow
@@ -689,7 +692,6 @@ def process_la_visit_status(file_path, output_path):
     df = read_any_excel_file(file_path)
     df.columns = df.columns.astype(str).str.strip()
 
-    # Filter out any pre-existing S1, S2, S3... columns from the source DF
     cols_to_keep = []
     for c in df.columns:
         clean_c = re.sub(r'[\[\]]', '', str(c)).strip().lower()
@@ -697,17 +699,13 @@ def process_la_visit_status(file_path, output_path):
             cols_to_keep.append(c)
 
     df = df[cols_to_keep].copy()
-
-    # Clean mapping e.g., '[LA 1]' -> 'la 1'
     clean_col_map = {re.sub(r'[\[\]]', '', str(c)).strip().lower(): c for c in df.columns}
 
-    # Format V1, P1, V2, P2... to HH:MM format
     for c in df.columns:
         clean_c = re.sub(r'[\[\]]', '', str(c)).strip().lower()
         if re.match(r'^[vp]\d+$', clean_c):
             df[c] = df[c].apply(format_hhmm_string)
 
-    # Find slot numbers present e.g. 'la 1', 'la 2'
     slot_numbers = []
     for c in df.columns:
         clean_c = re.sub(r'[\[\]]', '', str(c)).strip().lower()
@@ -717,7 +715,6 @@ def process_la_visit_status(file_path, output_path):
 
     slot_numbers = sorted(list(set(slot_numbers)), key=lambda x: int(x))
 
-    # Reconstruct final column order
     new_columns = []
     for col in df.columns:
         new_columns.append(col)
@@ -728,13 +725,12 @@ def process_la_visit_status(file_path, output_path):
             new_columns.append(f"Diff{idx}")
             new_columns.append(f"Status{idx}")
 
-    # Soft Pastel Mild Colors
-    green_fill = PatternFill(start_color="D4EDDA", end_color="D4EDDA", fill_type="solid") # Mild Soft Green
-    amber_fill = PatternFill(start_color="FFF3CD", end_color="FFF3CD", fill_type="solid") # Mild Soft Amber
-    red_fill = PatternFill(start_color="F8D7DA", end_color="F8D7DA", fill_type="solid")   # Mild Soft Red
+    green_fill = PatternFill(start_color="D4EDDA", end_color="D4EDDA", fill_type="solid")
+    amber_fill = PatternFill(start_color="FFF3CD", end_color="FFF3CD", fill_type="solid")
+    red_fill = PatternFill(start_color="F8D7DA", end_color="F8D7DA", fill_type="solid")
 
     calculated_data = {c: df[c].tolist() for c in df.columns}
-    fill_map = {}  # {(row_idx, col_name): fill_style}
+    fill_map = {}
 
     for idx in slot_numbers:
         v_col_name = clean_col_map.get(f"v{idx}")
@@ -751,9 +747,8 @@ def process_la_visit_status(file_path, output_path):
             p_mins = time_to_total_minutes(parse_time_value(p_raw)) if p_raw else None
 
             if v_mins is not None and p_mins is not None:
-                diff_mins = p_mins - v_mins  # positive if late, negative if early
+                diff_mins = p_mins - v_mins
                 abs_diff = abs(diff_mins)
-
                 diff_str = f"{abs_diff // 60:02d}:{abs_diff % 60:02d}"
 
                 if -15 <= diff_mins <= 15:
@@ -780,13 +775,11 @@ def process_la_visit_status(file_path, output_path):
         calculated_data[f"Diff{idx}"] = diff_list
         calculated_data[f"Status{idx}"] = status_list
 
-    # Construct Final DataFrame
     out_df = pd.DataFrame()
     for col in new_columns:
         if col in calculated_data:
             out_df[col] = calculated_data[col]
 
-    # Write to Workbook and Apply Color Formatting
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "LA Visit Status"
