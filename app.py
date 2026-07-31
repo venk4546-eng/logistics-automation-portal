@@ -66,6 +66,40 @@ CITY_STATE_MAP = {
 }
 
 # ==========================================
+# MASTER CHENNAI & HITECH CHENNAI ZONE MAP
+# ==========================================
+ZONE_MAP = {
+    # Chennai Locations
+    'ADYAR': 'South',
+    'NANGANALLUR': 'South',
+    'PORUR': 'South',
+    'SELAIYUR': 'South',
+    'VELACHERY WELLNESS': 'South',
+    'KK NAGAR': 'North',
+    'ANNA NAGAR': 'North',
+    'ANNA NAGAR K4': 'North',
+    'AVADI PPD': 'North',
+    'MYLAPORE': 'North',
+    'NUNGAMBAKKAM': 'North',
+    'PH ROAD': 'North',
+    'SOWCARPET': 'North',
+    'TIRUVALLUR': 'North',
+    'TRIPLICANE': 'North',
+
+    # Hitech Chennai Locations
+    'T NAGAR - HITECH': 'South',
+    'TAMBARAM - HITECH': 'South',
+    'VADAPALANI - HITECH': 'South',
+    'HITECH -VELACHERY': 'South',
+    'HITECH-VELACHERY': 'South',
+    'NANGANALLUR - HITECH': 'South',
+    'ANNA NAGAR - HITECH': 'North',
+    'GKS TOWERS - HITECH': 'North',
+    'PERAVALLUR - HITECH': 'North',
+    'WASHERMENPET - HITECH': 'North'
+}
+
+# ==========================================
 # EXACT HTML TABLE PARSER
 # ==========================================
 class ExactHTMLTableParser(HTMLParser):
@@ -123,7 +157,14 @@ def parse_html_exact_strings(file_path):
             pass
     return None
 
-def read_any_excel_file(file_path, sheet_name=0):
+def read_any_excel_file(file_path):
+    # Try Calamine first for fast and low memory Excel reading
+    for engine_name in ['calamine', 'openpyxl', 'xlrd', 'pyxlsb']:
+        try:
+            return pd.read_excel(file_path, engine=engine_name)
+        except Exception:
+            pass
+
     df_html = parse_html_exact_strings(file_path)
     if df_html is not None and not df_html.empty:
         return df_html
@@ -137,14 +178,8 @@ def read_any_excel_file(file_path, sheet_name=0):
             except Exception:
                 pass
 
-    for engine_name in ['openpyxl', 'xlrd', 'pyxlsb']:
-        try:
-            return pd.read_excel(file_path, sheet_name=sheet_name, engine=engine_name)
-        except Exception:
-            pass
-
     try:
-        return pd.read_excel(file_path, sheet_name=sheet_name)
+        return pd.read_excel(file_path)
     except Exception:
         pass
 
@@ -359,6 +394,9 @@ def add_total_row_to_df(df, df1_ftd, df2_ftd, df3_ftd, df1_mtd, df2_mtd, df3_mtd
 
     return pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
 
+# ==========================================
+# PROCESS HUB DATA WITH ZONE TOTALS
+# ==========================================
 def process_hub_data(df1_ftd, df2_ftd, df3_ftd, df1_mtd, df2_mtd, df3_mtd, target_city_name):
     f1_c_ftd = df1_ftd[df1_ftd['City'].astype(str).str.lower() == target_city_name.lower()].copy()
     f2_c_ftd = df2_ftd[df2_ftd['City'].astype(str).str.lower() == target_city_name.lower()].copy()
@@ -370,9 +408,11 @@ def process_hub_data(df1_ftd, df2_ftd, df3_ftd, df1_mtd, df2_mtd, df3_mtd, targe
 
     for df_item in [f1_c_ftd, f1_c_mtd, f2_c_ftd, f2_c_mtd, f3_c_ftd, f3_c_mtd]:
         h_col = [c for c in df_item.columns if 'hub' in c.lower()]
-        if h_col: df_item['Hub'] = df_item[h_col[0]].astype(str).str.strip().str.upper()
+        if h_col: 
+            df_item['Hub'] = df_item[h_col[0]].astype(str).str.strip().str.upper()
+            df_item['Zone'] = df_item['Hub'].map(ZONE_MAP).fillna('Other')
 
-    group_cols = ['State', 'City', 'Hub']
+    group_cols = ['State', 'City', 'Zone', 'Hub']
     ftd_res = calculate_sheet_metrics(f1_c_ftd, f2_c_ftd, f3_c_ftd, group_cols, prefix="FTD ")
     mtd_res = calculate_sheet_metrics(f1_c_mtd, f2_c_mtd, f3_c_mtd, group_cols, prefix="MTD ")
     
@@ -385,8 +425,42 @@ def process_hub_data(df1_ftd, df2_ftd, df3_ftd, df1_mtd, df2_mtd, df3_mtd, targe
             if tat_c in final_hub.columns: final_hub[tat_c] = final_hub[tat_c].fillna("00:00")
 
     if not final_hub.empty:
-        final_hub = add_total_row_to_df(final_hub, f1_c_ftd, f2_c_ftd, f3_c_ftd, f1_c_mtd, f2_c_mtd, f3_c_mtd, first_col='State')
+        df_north = final_hub[final_hub['Zone'] == 'North'].copy()
+        df_south = final_hub[final_hub['Zone'] == 'South'].copy()
+        df_other = final_hub[~final_hub['Zone'].isin(['North', 'South'])].copy()
+
+        parts = []
+
+        if not df_north.empty:
+            f1_f_n = f1_c_ftd[f1_c_ftd['Zone'] == 'North']
+            f2_f_n = f2_c_ftd[f2_c_ftd['Zone'] == 'North']
+            f3_f_n = f3_c_ftd[f3_c_ftd['Zone'] == 'North']
+            f1_m_n = f1_c_mtd[f1_c_mtd['Zone'] == 'North']
+            f2_m_n = f2_c_mtd[f2_c_mtd['Zone'] == 'North']
+            f3_m_n = f3_c_mtd[f3_c_mtd['Zone'] == 'North']
             
+            df_north_tot = add_total_row_to_df(df_north, f1_f_n, f2_f_n, f3_f_n, f1_m_n, f2_m_n, f3_m_n, first_col='State')
+            df_north_tot.iloc[-1, df_north_tot.columns.get_loc('State')] = "North Total/Avg"
+            parts.append(df_north_tot)
+
+        if not df_south.empty:
+            f1_f_s = f1_c_ftd[f1_c_ftd['Zone'] == 'South']
+            f2_f_s = f2_c_ftd[f2_c_ftd['Zone'] == 'South']
+            f3_f_s = f3_c_ftd[f3_c_ftd['Zone'] == 'South']
+            f1_m_s = f1_c_mtd[f1_c_mtd['Zone'] == 'South']
+            f2_m_s = f2_c_mtd[f2_c_mtd['Zone'] == 'South']
+            f3_m_s = f3_c_mtd[f3_c_mtd['Zone'] == 'South']
+
+            df_south_tot = add_total_row_to_df(df_south, f1_f_s, f2_f_s, f3_f_s, f1_m_s, f2_m_s, f3_m_s, first_col='State')
+            df_south_tot.iloc[-1, df_south_tot.columns.get_loc('State')] = "South Total/Avg"
+            parts.append(df_south_tot)
+
+        if not df_other.empty:
+            parts.append(df_other)
+
+        combined = pd.concat(parts, ignore_index=True)
+        final_hub = add_total_row_to_df(combined, f1_c_ftd, f2_c_ftd, f3_c_ftd, f1_c_mtd, f2_c_mtd, f3_c_mtd, first_col='State')
+
     return final_hub
 
 def write_not_dropped_sheet(writer, df3):
@@ -500,13 +574,13 @@ def write_not_dropped_sheet(writer, df3):
 
 def process_beat_performance(master_excel_path, ftd_date_raw, mtd_date_raw):
     try:
-        df1 = read_any_excel_file(master_excel_path, sheet_name='BV')
-        df2 = read_any_excel_file(master_excel_path, sheet_name='EV')
-        df3 = read_any_excel_file(master_excel_path, sheet_name='TAT')
+        df1 = pd.read_excel(master_excel_path, sheet_name='BV', engine='calamine')
+        df2 = pd.read_excel(master_excel_path, sheet_name='EV', engine='calamine')
+        df3 = pd.read_excel(master_excel_path, sheet_name='TAT', engine='calamine')
     except Exception:
-        df1 = read_any_excel_file(master_excel_path, sheet_name=0)
-        df2 = pd.DataFrame()
-        df3 = pd.DataFrame()
+        df1 = pd.read_excel(master_excel_path, sheet_name='BV')
+        df2 = pd.read_excel(master_excel_path, sheet_name='EV')
+        df3 = pd.read_excel(master_excel_path, sheet_name='TAT')
 
     df1.columns = df1.columns.astype(str).str.strip()
     df1 = normalize_bv_columns(df1)
@@ -516,33 +590,31 @@ def process_beat_performance(master_excel_path, ftd_date_raw, mtd_date_raw):
     df1['DT_PARSED'] = pd.to_datetime(df1[date_col_f1], errors='coerce', dayfirst=True)
     df1['State'] = df1['State'].astype(str).str.strip().str.title() if 'State' in df1.columns else ''
 
-    if not df2.empty:
-        df2.columns = df2.columns.astype(str).str.strip()
-        c2 = find_city_col(df2)
-        if c2: df2['City'] = df2[c2].astype(str).str.strip().str.title()
-        date_col_f2 = [c for c in df2.columns if 'DATE' in c.upper() or 'TIME' in c.upper()][0]
-        df2['DT_PARSED'] = pd.to_datetime(df2[date_col_f2], errors='coerce', dayfirst=True)
-        df2['State'] = df2['State'].astype(str).str.strip().str.title() if 'State' in df2.columns else ''
-        df2['RANGE_CLEAN'] = df2['RANGE'].astype(str).str.lower().str.strip() if 'RANGE' in df2.columns else ''
-        df2['is_within_30m'] = df2['RANGE_CLEAN'].apply(lambda x: 1 if 'within' in x and '30' in x else 0)
-        df2['total_count'] = df2['RANGE_CLEAN'].apply(lambda x: 1 if 'within' in x or 'beyond' in x else 0)
+    df2.columns = df2.columns.astype(str).str.strip()
+    c2 = find_city_col(df2)
+    if c2: df2['City'] = df2[c2].astype(str).str.strip().str.title()
+    date_col_f2 = [c for c in df2.columns if 'DATE' in c.upper() or 'TIME' in c.upper()][0]
+    df2['DT_PARSED'] = pd.to_datetime(df2[date_col_f2], errors='coerce', dayfirst=True)
+    df2['State'] = df2['State'].astype(str).str.strip().str.title() if 'State' in df2.columns else ''
+    df2['RANGE_CLEAN'] = df2['RANGE'].astype(str).str.lower().str.strip() if 'RANGE' in df2.columns else ''
+    df2['is_within_30m'] = df2['RANGE_CLEAN'].apply(lambda x: 1 if 'within' in x and '30' in x else 0)
+    df2['total_count'] = df2['RANGE_CLEAN'].apply(lambda x: 1 if 'within' in x or 'beyond' in x else 0)
 
-    if not df3.empty:
-        df3.columns = df3.columns.astype(str).str.strip()
-        c3 = find_city_col(df3)
-        if c3: df3['City'] = df3[c3].astype(str).str.strip().str.title()
-        h_col3 = [c for c in df3.columns if 'hub' in c.lower()]
-        if h_col3: df3['Hub'] = df3[h_col3[0]].astype(str).str.strip().str.upper()
+    df3.columns = df3.columns.astype(str).str.strip()
+    c3 = find_city_col(df3)
+    if c3: df3['City'] = df3[c3].astype(str).str.strip().str.title()
+    h_col3 = [c for c in df3.columns if 'hub' in c.lower()]
+    if h_col3: df3['Hub'] = df3[h_col3[0]].astype(str).str.strip().str.upper()
 
-        date_col_f3 = [c for c in df3.columns if 'DATE' in c.upper() or 'PICKUP' in c.upper() or 'TIME' in c.upper()][0]
-        df3['DT_PARSED'] = pd.to_datetime(df3[date_col_f3], errors='coerce', dayfirst=True)
-        df3['State'] = df3['State'].astype(str).str.strip().str.title() if 'State' in df3.columns else ''
-        tat_cols = [col for col in df3.columns if 'TAT Tim' in col or 'TAT Timing' in col]
-        df3['TAT_Minutes'] = df3[tat_cols[0]].apply(time_to_minutes) if tat_cols else 0
-        df3['Radius_Clean'] = df3['Radius'].astype(str).str.lower().str.strip() if 'Radius' in df3.columns else 'overall'
+    date_col_f3 = [c for c in df3.columns if 'DATE' in c.upper() or 'PICKUP' in c.upper() or 'TIME' in c.upper()][0]
+    df3['DT_PARSED'] = pd.to_datetime(df3[date_col_f3], errors='coerce', dayfirst=True)
+    df3['State'] = df3['State'].astype(str).str.strip().str.title() if 'State' in df3.columns else ''
+    tat_cols = [col for col in df3.columns if 'TAT Tim' in col or 'TAT Timing' in col]
+    df3['TAT_Minutes'] = df3[tat_cols[0]].apply(time_to_minutes) if tat_cols else 0
+    df3['Radius_Clean'] = df3['Radius'].astype(str).str.lower().str.strip() if 'Radius' in df3.columns else 'overall'
 
     max_data_date = df1['DT_PARSED'].max()
-    if pd.isna(max_data_date) and not df2.empty: max_data_date = df2['DT_PARSED'].max()
+    if pd.isna(max_data_date): max_data_date = df2['DT_PARSED'].max()
 
     dt_ftd = pd.to_datetime(ftd_date_raw, errors='coerce', dayfirst=True) if ftd_date_raw else max_data_date
     if pd.isna(dt_ftd): dt_ftd = max_data_date
@@ -552,12 +624,10 @@ def process_beat_performance(master_excel_path, ftd_date_raw, mtd_date_raw):
 
     df1_ftd = df1[df1['DT_PARSED'].dt.date == dt_ftd.date()].copy()
     df1_mtd = df1[(df1['DT_PARSED'].dt.date >= mtd_start.date()) & (df1['DT_PARSED'].dt.date <= dt_mtd.date())].copy()
-    
-    df2_ftd = df2[df2['DT_PARSED'].dt.date == dt_ftd.date()].copy() if not df2.empty else pd.DataFrame()
-    df2_mtd = df2[(df2['DT_PARSED'].dt.date >= mtd_start.date()) & (df2['DT_PARSED'].dt.date <= dt_mtd.date())].copy() if not df2.empty else pd.DataFrame()
-    
-    df3_ftd = df3[df3['DT_PARSED'].dt.date == dt_ftd.date()].copy() if not df3.empty else pd.DataFrame()
-    df3_mtd = df3[(df3['DT_PARSED'].dt.date >= mtd_start.date()) & (df3['DT_PARSED'].dt.date <= dt_mtd.date())].copy() if not df3.empty else pd.DataFrame()
+    df2_ftd = df2[df2['DT_PARSED'].dt.date == dt_ftd.date()].copy()
+    df2_mtd = df2[(df2['DT_PARSED'].dt.date >= mtd_start.date()) & (df2['DT_PARSED'].dt.date <= dt_mtd.date())].copy()
+    df3_ftd = df3[df3['DT_PARSED'].dt.date == dt_ftd.date()].copy()
+    df3_mtd = df3[(df3['DT_PARSED'].dt.date >= mtd_start.date()) & (df3['DT_PARSED'].dt.date <= dt_mtd.date())].copy()
 
     group_cols = ['State', 'City']
     ftd_overall = calculate_sheet_metrics(df1_ftd, df2_ftd, df3_ftd, group_cols, prefix="FTD ")
@@ -581,7 +651,7 @@ def process_beat_performance(master_excel_path, ftd_date_raw, mtd_date_raw):
     return overall_df, chennai_df, hitech_chennai_df, dt_ftd.strftime('%d-%m-%Y'), dt_mtd.strftime('%d-%m-%Y'), df3
 
 # ==========================================
-# PROJECT 2: FIRST VISIT STATUS LOGIC (PASTEL MILD COLORS)
+# PROJECT 2: FIRST VISIT STATUS LOGIC (MEMORY OPTIMIZED)
 # ==========================================
 def apply_excel_formatting(file_path):
     wb = load_workbook(file_path)
@@ -686,7 +756,7 @@ def process_first_visit(master_excel_path):
     return result_df.sort_values(by=['CITY', '[MAPPED LA]']) if not result_df.empty else result_df
 
 # ==========================================
-# PROJECT 6: LA VISIT STATUS LOGIC (EXCLUDING S1, S2... COLUMNS)
+# PROJECT 6: LA VISIT STATUS LOGIC
 # ==========================================
 def process_la_visit_status(file_path, output_path):
     df = read_any_excel_file(file_path)
@@ -699,6 +769,7 @@ def process_la_visit_status(file_path, output_path):
             cols_to_keep.append(c)
 
     df = df[cols_to_keep].copy()
+
     clean_col_map = {re.sub(r'[\[\]]', '', str(c)).strip().lower(): c for c in df.columns}
 
     for c in df.columns:
@@ -749,6 +820,7 @@ def process_la_visit_status(file_path, output_path):
             if v_mins is not None and p_mins is not None:
                 diff_mins = p_mins - v_mins
                 abs_diff = abs(diff_mins)
+
                 diff_str = f"{abs_diff // 60:02d}:{abs_diff % 60:02d}"
 
                 if -15 <= diff_mins <= 15:
