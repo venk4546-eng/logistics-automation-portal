@@ -1,6 +1,6 @@
-Flask
+flask
 pandas
 openpyxl
-numpy
+python-calamine
 reportlab
 gunicorn
